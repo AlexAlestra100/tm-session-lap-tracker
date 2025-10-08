@@ -1,5 +1,3 @@
-bool getPersonalBests = true;
-
 array<SessionPlayerData@> GetSessionPlayers() {
     array<SessionPlayerData@> results;
 
@@ -7,9 +5,11 @@ array<SessionPlayerData@> GetSessionPlayers() {
     auto raceData = MLFeed::GetRaceData_V4();
 
     // Early exit and cleanup when there is no race or players
-    if (raceData is null || raceData.SortedPlayers_TimeAttack is null || raceData.SortedPlayers_TimeAttack.Length == 0) {
+    if (raceData is null || raceData.Map.Length == 0 || raceData.SortedPlayers_TimeAttack is null || raceData.SortedPlayers_TimeAttack.Length == 0) {
         gPlayerLapData.DeleteAll();
-        getPersonalBests = true;
+        gPbRequestQueue.Resize(0);
+        gPbWorkerRunning = false;
+        mapId = "";
         return results;
     }
 
@@ -36,18 +36,13 @@ array<SessionPlayerData@> GetSessionPlayers() {
 
         // Checks if we have cached data
         if (!gPlayerLapData.Get(userId, packedValue)) {
-            AppendAccountIdToQuery(raceData.Map, userId, pbQueryFragment);
+            AppendAccountIdToQuery(userId, pbQueryFragment);
             // Initialize with unknown PB (-1) and lastLap 0
             packedValue = (int64(-1) << 32) | int64(0);
             gPlayerLapData.Set(userId, packedValue);
         } else {
             int personalBest = int(packedValue >> 32);
             int lastLap      = int(packedValue & 0xFFFFFFFF);
-
-            // If still unset, queue for fetch
-            if (personalBest < 0) {
-                AppendAccountIdToQuery(raceData.Map, userId, pbQueryFragment);
-            }
 
             // Only update if we already have a PB and this lap is faster
             if (personalBest >= 0 && p.BestTime > 0 && p.BestTime < personalBest) {
@@ -66,7 +61,7 @@ array<SessionPlayerData@> GetSessionPlayers() {
         }
 
         d.personalBest = int(packedValue >> 32);
-        d.lastLap      = int(packedValue & 0xFFFFFFFF);
+        d.lastLap = int(packedValue & 0xFFFFFFFF);
         results.InsertLast(d);
     }
 
@@ -76,22 +71,23 @@ array<SessionPlayerData@> GetSessionPlayers() {
     }
 
     // If we queued any PB lookups, trigger the fetch
-    if (getPersonalBests && pbQueryFragment.Length > 0) {
-        getPersonalBests = false;
-        FetchAndCachePBs(pbQueryFragment);
+    if (pbQueryFragment.Length > 0) {
+        trace("Making api call");
+        EnqueuePbRequest(raceData.Map + "|" + pbQueryFragment);
     }
 
     return results;
 }
 
 // Helper to append an accountId to the query string
-void AppendAccountIdToQuery(string &in mapUid, string &in userId, string &out pbQueryFragment) {
+void AppendAccountIdToQuery(string &in userId, string &out pbQueryFragment) {
     if (pbQueryFragment.Length == 0) {
-        pbQueryFragment = mapUid + "?";
+        // start with the first accountId
+        pbQueryFragment = userId;
     } else {
-        pbQueryFragment += "&";
+        // append additional accountIds with commas
+        pbQueryFragment += "," + userId;
     }
-    pbQueryFragment += "accountId[]=" + userId;
 }
 
 // Remove players from the cache that are no longer active in the session

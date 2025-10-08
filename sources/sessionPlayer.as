@@ -1,6 +1,7 @@
 // Global cache: for personalBest/lastLap per player
 // Format: (personalBest << 32) | lastLap - packed into single 64-bit int
 dictionary gPlayerLapData; // string -> int64
+string mapId = "";
 
 class SessionPlayerData {
     string name;
