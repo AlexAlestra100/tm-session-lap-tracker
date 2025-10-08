@@ -45,7 +45,7 @@ array<SessionPlayerData@> GetSessionPlayers() {
             int lastLap = int(packedValue & 0xFFFFFFFF);
 
             // Only update if we already have a PB and this lap is faster
-            if (personalBest >= 0 && p.BestTime > 0 && p.BestTime < personalBest) {
+            if ((p.BestTime > 0 && p.BestTime < personalBest) || personalBest == -1) {
                 personalBest = p.BestTime;
             }
             if (p.IsFinished && p.LastCpTime != lastLap) {

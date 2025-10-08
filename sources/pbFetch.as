@@ -51,7 +51,7 @@ void FetchAndCachePBs(const string &in packed) {
 
         string accountId = entry["accountId"];
 
-        int score = 10000;
+        int score = -1;
         if (entry.HasKey("recordScore") && entry["recordScore"].HasKey("time")) {
             score = int(entry["recordScore"]["time"]);
         }
