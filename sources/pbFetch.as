@@ -86,7 +86,7 @@ void ResolveMapId(const string &in mapUid) {
     auto json = Json::Parse(req.String());
     if (json.GetType() == Json::Type::Array && json.Length > 0) {
         mapId = string(json[0]["mapId"]);
-        trace("Resolved mapUid " + mapUid + " -> mapId " + mapId);
+        trace("Resolved mapUid " + mapUid + " to mapId " + mapId);
     } else {
         error("Unexpected map resolve response: " + req.String());
     }

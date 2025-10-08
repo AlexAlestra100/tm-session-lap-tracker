@@ -42,7 +42,7 @@ array<SessionPlayerData@> GetSessionPlayers() {
             gPlayerLapData.Set(userId, packedValue);
         } else {
             int personalBest = int(packedValue >> 32);
-            int lastLap      = int(packedValue & 0xFFFFFFFF);
+            int lastLap = int(packedValue & 0xFFFFFFFF);
 
             // Only update if we already have a PB and this lap is faster
             if (personalBest >= 0 && p.BestTime > 0 && p.BestTime < personalBest) {
