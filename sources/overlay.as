@@ -1,5 +1,6 @@
 void RenderOverlay(array<SessionPlayerData@>@ players) {
-    if (players.Length == 0) return; // Skip rendering if no data
+    // Skip rendering if no data
+    if (players.Length == 0) return;
 
     bool windowOpen = UI::Begin("Session Lap Tracker");
     

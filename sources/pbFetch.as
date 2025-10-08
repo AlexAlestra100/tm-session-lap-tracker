@@ -1,5 +1,5 @@
 void FetchAndCachePBs(const string &in packed) {
-    trace("Global player cache: " + gPlayerLapData.GetSize() + " entries, mapId: " + mapId);
+    trace("Global player cache: " + gPlayerLapData.GetSize() + " entries, mapId: " + (mapId.Length > 0 ? mapId : "\"\""));
 
     auto parts = packed.Split("|");
     string mapUid = parts[0];
@@ -7,7 +7,8 @@ void FetchAndCachePBs(const string &in packed) {
     // Wait until authenticated
     while (!NadeoServices::IsAuthenticated("NadeoServices")) {
         trace("Waiting for NadeoServices authentication...");
-        yield(); // yield so we don't block the render loop
+        // yield so we don't block the render loop
+        yield();
     }
 
     if (mapId.Length == 0) {
@@ -30,7 +31,7 @@ void FetchAndCachePBs(const string &in packed) {
     }
 
     if (req.ResponseCode() != 200) {
-        error("PB fetch failed: " + req.ResponseCode() + " body: " + req.String());
+        error("PB fetch failed: " + req.String());
         return;
     }
 
@@ -50,7 +51,7 @@ void FetchAndCachePBs(const string &in packed) {
 
         string accountId = entry["accountId"];
 
-        int score = -1;
+        int score = 10000;
         if (entry.HasKey("recordScore") && entry["recordScore"].HasKey("time")) {
             score = int(entry["recordScore"]["time"]);
         }
@@ -78,16 +79,13 @@ void ResolveMapId(const string &in mapUid) {
     }
 
     if (req.ResponseCode() != 200) {
-        trace("MapId resolve failed: " + req.ResponseCode());
+        trace("MapId resolve failed: " + req.String());
         return;
     }
 
     auto json = Json::Parse(req.String());
     if (json.GetType() == Json::Type::Array && json.Length > 0) {
         mapId = string(json[0]["mapId"]);
-        trace("Resolved mapUid " + mapUid + " -> mapId " + mapId);
-    } else if (json.HasKey("mapId")) {
-        mapId = string(json["mapId"]);
         trace("Resolved mapUid " + mapUid + " -> mapId " + mapId);
     } else {
         error("Unexpected map resolve response: " + req.String());
