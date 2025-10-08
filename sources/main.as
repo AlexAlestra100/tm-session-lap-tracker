@@ -1,6 +1,8 @@
-void Main() { }
+void Main() {
+    NadeoServices::AddAudience("NadeoServices");
+}
 
 void Render() {
-    auto players = GetSessionPlayers();
+    array<SessionPlayerData@> players = GetSessionPlayers();
     RenderOverlay(players);
 }

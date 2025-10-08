@@ -2,7 +2,7 @@
 name = "Session Lap Tracker"
 author = "Zander"
 category = "Session Lap Data"
-version = "1.0"
+version = "2.0"
 
 [script]
-dependencies = ["MLFeedRaceData"]
+dependencies = [ "NadeoServices", "MLFeedRaceData" ]
