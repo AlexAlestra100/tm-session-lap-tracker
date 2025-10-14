@@ -32,7 +32,6 @@ void GetSessionPlayers() {
 
             // Initialize with unknown PB (-1) and lastLap 0
             @d = SessionPlayerData();
-            d.userId = userId;
             d.name = p.Name;
 
             gSessionPlayers.Set(userId, d);
@@ -60,7 +59,7 @@ void GetSessionPlayers() {
 
     // If we queued any PB lookups, trigger the fetch
     if (pbQueryFragment.Length > 0) {
-        trace("Making api call");
+        trace("Making api call, fetching PBs for: " + pbQueryFragment);
         EnqueuePbRequest(raceData.Map + "|" + pbQueryFragment);
     }
 }

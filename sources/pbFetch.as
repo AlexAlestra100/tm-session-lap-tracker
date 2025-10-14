@@ -1,5 +1,5 @@
 void FetchAndCachePBs(const string &in packed) {
-    trace("Global player cache: " + gSessionPlayers.GetSize() + " entries, mapId: " + (mapId.Length > 0 ? mapId : "\"\""));
+    trace("Global player cache: " + gSessionPlayers.GetSize() + " entries");
 
     auto parts = packed.Split("|");
     string mapUid = parts[0];
