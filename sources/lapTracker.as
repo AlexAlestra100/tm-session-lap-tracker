@@ -1,20 +1,17 @@
-array<SessionPlayerData@> GetSessionPlayers() {
-    array<SessionPlayerData@> results;
-
+void GetSessionPlayers() {
     // Get race data
     auto raceData = MLFeed::GetRaceData_V4();
 
     // Early exit and cleanup when there is no race or players
     if (raceData is null || raceData.Map.Length == 0 || raceData.SortedPlayers_TimeAttack is null || raceData.SortedPlayers_TimeAttack.Length == 0) {
-        gPlayerLapData.DeleteAll();
+        gSessionPlayers.DeleteAll();
         gPbRequestQueue.Resize(0);
         gPbWorkerRunning = false;
         mapId = "";
-        return results;
+        return;
     }
 
     auto players = raceData.SortedPlayers_TimeAttack;
-    results.Reserve(players.Length);
 
     dictionary activePlayers;
     string pbQueryFragment;
@@ -28,45 +25,36 @@ array<SessionPlayerData@> GetSessionPlayers() {
 
         activePlayers.Set(userId, true);
 
-        auto d = SessionPlayerData();
-        d.name = p.Name;
-        d.bestLap = p.BestTime;
-
-        int64 packedValue;
-
+        SessionPlayerData@ d;
         // Checks if we have cached data
-        if (!gPlayerLapData.Get(userId, packedValue)) {
+        if (!gSessionPlayers.Get(userId, @d)) {
             AppendAccountIdToQuery(userId, pbQueryFragment);
+
             // Initialize with unknown PB (-1) and lastLap 0
-            packedValue = (int64(-1) << 32) | int64(0);
-            gPlayerLapData.Set(userId, packedValue);
-        } else {
-            int personalBest = int(packedValue >> 32);
-            int lastLap = int(packedValue & 0xFFFFFFFF);
+            @d = SessionPlayerData();
+            d.userId = userId;
+            d.name = p.Name;
 
-            // Only update if we already have a PB and this lap is faster
-            if ((p.BestTime > 0 && p.BestTime < personalBest) || personalBest == -1) {
-                personalBest = p.BestTime;
-            }
-            if (p.IsFinished && p.LastCpTime != lastLap) {
-                lastLap = p.LastCpTime;
-            }
-
-            // Additional check to avoid unnecessary writes
-            int64 newPacked = (int64(personalBest) << 32) | int64(lastLap);
-            if (newPacked != packedValue) {
-                gPlayerLapData.Set(userId, newPacked);
-                packedValue = newPacked;
-            }
+            gSessionPlayers.Set(userId, d);
         }
 
-        d.personalBest = int(packedValue >> 32);
-        d.lastLap = int(packedValue & 0xFFFFFFFF);
-        results.InsertLast(d);
+        // Keep name fresh only if it changed
+        if (d.name != p.Name) {
+            d.name = p.Name;
+        }
+        // Always update bestLap (cheap)
+        d.bestLap = p.BestTime;
+
+        if ((p.BestTime > 0 && p.BestTime < d.personalBest) || d.personalBest == -1) {
+            d.personalBest = p.BestTime;
+        }
+        if (p.IsFinished && p.LastCpTime != d.lastLap) {
+            d.lastLap = p.LastCpTime;
+        }
     }
 
     // Remove players we no longer see in the session
-    if (gPlayerLapData.GetSize() > 0) {
+    if (gSessionPlayers.GetSize() > 0) {
         CleanupInactivePlayers(activePlayers);
     }
 
@@ -75,8 +63,6 @@ array<SessionPlayerData@> GetSessionPlayers() {
         trace("Making api call");
         EnqueuePbRequest(raceData.Map + "|" + pbQueryFragment);
     }
-
-    return results;
 }
 
 // Helper to append an accountId to the query string
@@ -91,11 +77,11 @@ void AppendAccountIdToQuery(string &in userId, string &out pbQueryFragment) {
 }
 
 // Remove players from the cache that are no longer active in the session
-void CleanupInactivePlayers(const dictionary&in activePlayers) {
-    array<string> cachedIds = gPlayerLapData.GetKeys();
+void CleanupInactivePlayers(const dictionary &in activePlayers) {
+    array<string> cachedIds = gSessionPlayers.GetKeys();
     for (uint i = 0; i < cachedIds.Length; i++) {
         if (!activePlayers.Exists(cachedIds[i])) {
-            gPlayerLapData.Delete(cachedIds[i]);
+            gSessionPlayers.Delete(cachedIds[i]);
         }
     }
 }

@@ -1,5 +1,5 @@
 void FetchAndCachePBs(const string &in packed) {
-    trace("Global player cache: " + gPlayerLapData.GetSize() + " entries, mapId: " + (mapId.Length > 0 ? mapId : "\"\""));
+    trace("Global player cache: " + gSessionPlayers.GetSize() + " entries, mapId: " + (mapId.Length > 0 ? mapId : "\"\""));
 
     auto parts = packed.Split("|");
     string mapUid = parts[0];
@@ -56,16 +56,16 @@ void FetchAndCachePBs(const string &in packed) {
             score = int(entry["recordScore"]["time"]);
         }
 
-        int64 packedValue;
-        if (!gPlayerLapData.Get(accountId, packedValue)) {
+        SessionPlayerData@ d;
+        if (!gSessionPlayers.Get(accountId, @d) || d is null) {
             trace("Warning: got PB for unknown accountId " + accountId);
             continue;
         }
 
-        int lastLap = int(packedValue & 0xFFFFFFFF);
-        packedValue = (int64(score) << 32) | int64(lastLap);
-
-        gPlayerLapData.Set(accountId, packedValue);
+        // Update personal best if valid
+        if (score > 0) {
+            d.personalBest = score;
+        }
     }
 }
 
